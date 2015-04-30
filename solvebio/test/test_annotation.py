@@ -1,9 +1,8 @@
 import os
 
-import solvebio
 from solvebio.resource import Annotation, Sample
 
-from .helper import unittest, SolveBioTestCase
+from .helper import SolveBioTestCase
 
 
 class AnnotationTest(SolveBioTestCase):
@@ -11,8 +10,6 @@ class AnnotationTest(SolveBioTestCase):
         self.assertEqual(Annotation.class_url(), '/v1/annotations',
                          'Annotation.class_url()')
 
-    @unittest.skipIf(solvebio.api_host == 'https://api.solvebio.com',
-                     "annotation creation")
     def test_annotation_crud(self):
         vcf_file = os.path.join(os.path.dirname(__file__),
                                 "data/sample.vcf.gz")

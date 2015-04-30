@@ -12,6 +12,13 @@ import os as _os
 import logging as _logging
 from .help import open_help as _open_help
 
+# Capture warnings (specifically from urllib3)
+try:
+    _logging.captureWarnings(True)
+except:
+    # Python 2.6 doesn't support this
+    pass
+
 # Read/Write API key
 api_key = _os.environ.get('SOLVEBIO_API_KEY', None)
 # OAuth2 access tokens

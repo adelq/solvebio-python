@@ -9,7 +9,6 @@ import tempfile
 import urllib
 
 from ..client import client, _handle_api_error, _handle_request_error
-from ..errors import SolveError
 from ..utils.tabulate import tabulate
 from ..utils.printing import pager
 
@@ -141,23 +140,23 @@ class DeletableAPIResource(APIResource):
 
 class DownloadableAPIResource(APIResource):
 
-    def download(self, path=None):
+    def download(self, path=None, **kwargs):
         """
-        Download the file to the specified path (or a temp. dir).
+        Download the file to the specified directory
+        (or a temp. dir if nothing is specified).
         """
         download_url = self.instance_url() + '/download'
-        response = self.request('get', download_url, params={},
-                                allow_redirects=False)
+        # Don't redirect, just return the signed S3 URL
+        kwargs.update({'redirect': ''})
+        response = self.request(
+            'get', download_url, params=kwargs, allow_redirects=False)
 
-        if 302 != response.status_code:
-            # Some kind of error. We expect a redirect
-            raise SolveError('Could not download file: response code {0}'
-                             .format(response.status_code))
-
-        download_url = response.headers['location']
+        download_url = response['url']
         filename = download_url.split('%3B%20filename%3D')[1]
 
-        if path is None:
+        if path:
+            path = os.path.dirname(os.path.expanduser(path))
+        else:
             path = tempfile.gettempdir()
 
         filename = os.path.join(path, filename)
@@ -173,9 +172,7 @@ class DownloadableAPIResource(APIResource):
         with open(filename, 'wb') as fileobj:
             fileobj.write(response._content)
 
-        response = convert_to_solve_object(response)
-        response.filename = filename
-        return response
+        return filename
 
 
 class ListableAPIResource(APIResource):
@@ -191,7 +188,7 @@ class ListableAPIResource(APIResource):
         list_fields = getattr(results.data[0], 'LIST_FIELDS', None)
         if list_fields:
             fields, headers = zip(*list_fields)
-            results.set_tabulate(fields, headers=headers)
+            results.set_tabulate(fields, headers=headers, sort=False)
 
         return results
 

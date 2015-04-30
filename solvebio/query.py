@@ -327,6 +327,34 @@ class Query(object):
         # self.total will warm up the response if it needs to
         return self.total
 
+    def facets(self, *args, **kwargs):
+        """
+        Returns a dictionary with the requested facets.
+
+        The facets function supports string args, and keyword
+        args.
+
+        q.facets('field_1', 'field_2') will return facets for
+        field_1 and field_2.
+        q.facets(field_1={'limit': 0}, field_2={'limit': 10})
+        will return all facets for field_1 and 10 facets for field_2.
+        """
+        # Combine args and kwargs into facet format.
+        facets = dict((a, {}) for a in args)
+        facets.update(kwargs)
+
+        if not facets:
+            raise AttributeError('Faceting requires at least one field')
+
+        for f in facets.keys():
+            if not isinstance(f, basestring):
+                raise AttributeError('Facet field arguments must be strings')
+
+        q = self._clone()
+        q._limit = 0
+        q.execute(offset=0, facets=facets)
+        return q._response.get('facets')
+
     def __len__(self):
         """
         Returns the total number of results returned in a query. It is the
@@ -525,18 +553,20 @@ class Query(object):
         if self._genome_build is not None:
             q['genome_build'] = self._genome_build
 
-        # Add or modify query parameters (used by BatchQuery)
+        # Add or modify query parameters
+        # (used by BatchQuery and facets)
         q.update(**kwargs)
 
         return q
 
-    def execute(self, offset=0):
+    def execute(self, offset=0, **query):
         """
-        Executes a query.
+        Executes a query. Additional query parameters can be passed
+        as keyword arguments.
 
         Returns: The request parameters and the raw query response.
         """
-        _params = self._build_query()
+        _params = self._build_query(**query)
         self._page_offset = offset
 
         _params.update(
